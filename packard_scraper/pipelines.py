@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from packard_scarper.db.pdexcel import PandasExcelHelper
+from packard_scraper.db.pdexcel import PandasExcelHelper
 
 # Define your item pipelines here
 #

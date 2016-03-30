@@ -17,8 +17,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 '''
 
-import scrapy.http
-from items import FellowProfile 
+import scrapy
+import os.path
+
+from packard_scraper.items import FellowProfile 
 
 class PackardSpider(scrapy.Spider):
     '''
@@ -30,7 +32,7 @@ class PackardSpider(scrapy.Spider):
     base_url = (index + "/what-we-fund/conservation-and-science/science/"+
                 "packard-fellowships-for-science-and-engineering/fellowship"+
                 "-directory")
-    get_query = "/?keyword=&display=grid"
+    get_query = "/?display=grid"
     start_url = base_url + get_query
 
     def __init__(self,  *args, **kwargs):
@@ -52,7 +54,14 @@ class PackardSpider(scrapy.Spider):
     def initiate_directory_parsing(self, response):
         profile_list_count =\
         int(response.xpath("//a[@class='page-numbers']/text()")[-1].extract())
-        self.parse_directory_list(response)
+        
+        links = [str(uc_link) for uc_link in 
+                 response.xpath("//div[@class='thumbnail']/a/@href").extract()]
+        for url in links:
+            if not self.db.contains(url):
+                yield scrapy.Request(url,callback=self.parse_profile,
+                                 method="GET")
+                
         for i_profile_list in range(2,profile_list_count + 1):
             url = PackardSpider.base_url + "/page/"+str(i_profile_list)\
             + PackardSpider.get_query
@@ -66,6 +75,9 @@ class PackardSpider(scrapy.Spider):
             if not self.db.contains(url):
                 yield scrapy.Request(url,callback=self.parse_profile,
                                  method="GET")
+            else:
+                print("Profile for {:s} is already in database. SKIPPING.".format(os.path.basename(url[:-1])))
+                
     def parse_profile(self, response):
         profile = FellowProfile()
         profile["name"] = \
@@ -77,7 +89,10 @@ class PackardSpider(scrapy.Spider):
         profile["institution"], profile["field"] = \
         response.xpath("//div[@id='fellow-header']//div[@class='wpb_wrapper']/p/a/text()")[:2].extract() 
         
-        profile["synopsis"] = response.xpath("//div[@id='fellow-header']//div[@class='wpb_wrapper']/p/a/text()")[:2].extract()
+        synopsis_prelim = response.xpath("//div[@id='fellow-content']//div[@class='wpb_wrapper']/p/text()")
+        if(len(synopsis_prelim) == 0):
+            synopsis_prelim = response.xpath("//div[@id='fellow-content']//div[@class='wpb_wrapper']/p/span/text()")
+        profile["synopsis"] = synopsis_prelim[0].extract()
         profile["url"] = response.url
         yield profile
         

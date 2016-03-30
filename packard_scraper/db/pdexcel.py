@@ -8,7 +8,7 @@ import pandas as pd
 from pandas.io.excel import ExcelWriter
 import os
 from datetime import datetime
-from items import FellowProfile
+from packard_scraper.items import FellowProfile
 
 
 class PandasExcelHelper(object):
@@ -100,7 +100,7 @@ class PandasExcelHelper(object):
         '''
         Dumps all solicitations in both databases to an excel file
         '''
-        print "\n\n========  Saving solicitations...  ========"
+        print "\n\n========  Saving {:s}  ========".format(self.sheet_name)
         writer = ExcelWriter(self.db_filename)
         self.profile_dataframe.to_excel(writer,self.sheet_name,merge_cells=False)
         writer.save()
